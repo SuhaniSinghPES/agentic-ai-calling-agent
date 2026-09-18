@@ -1,102 +1,116 @@
 # Agentic AI Calling Agent
 
-An AI-powered conversational agent backend built with Python, Flask, REST APIs, LLM integration, session memory, knowledge retrieval, and webhook support.
+An AI-powered voice customer support and consultation booking system built using Python, Flask, Twilio Voice, OpenRouter, ElevenLabs, and SQLite.
 
-## Architecture
-
-Caller / Voice Interface
-        |
-        v
-Speech-to-Text
-        |
-        v
-Flask REST API
-        |
-        v
-Conversation Agent
-   |          |
-   v          v
-Session     Knowledge
-Memory      Base
-        |
-        v
-       LLM
-        |
-        v
-Generated Response
-        |
-        v
-Text-to-Speech / Voice Platform
+The system accepts spoken customer queries, processes them through an AI agent and company knowledge base, maintains conversation sessions, and provides voice responses. It also supports consultation booking through tool calling and stores appointment data in SQLite.
 
 ## Features
 
-- Conversational AI agent
+- AI-powered conversational voice agent
+- Twilio Voice integration for phone calls
+- Speech-based customer input using Twilio `<Gather>`
+- OpenRouter-powered LLM agent
+- Session-based conversation management
+- Knowledge-base retrieval using TF-IDF
+- Function/tool calling
+- Consultation appointment booking
+- SQLite persistence for appointments
+- ElevenLabs Text-to-Speech integration
+- ElevenLabs Speech-to-Text webhook integration
+- Webhook signature verification using HMAC
 - Flask REST API
-- Session-based conversation memory
-- Lightweight knowledge-base retrieval
-- Prompt engineering
-- Webhook endpoint
-- Error handling
-- Environment variable configuration
-- Automated API tests
-- Architecture ready for voice-platform integration
+- Public HTTPS webhook testing through Cloudflare Tunnel
 
-## API Endpoints
+## System Architecture
 
-### GET /
-Basic application status.
+```text
+                    Customer
+                       |
+                       | Phone Call
+                       v
+                 Twilio Voice
+                       |
+                       | Speech Recognition
+                       v
+              Flask /voice/process
+                       |
+             +---------+---------+
+             |                   |
+             v                   v
+       Fast FAQ Paths        AI Agent
+                                 |
+                    +------------+------------+
+                    |            |            |
+                    v            v            v
+              Knowledge Base   LLM        Tools
+                 TF-IDF       OpenRouter      |
+                                             |
+                                             v
+                                      SQLite Database
+                                             |
+                                             v
+                                      Appointment
+                    |
+                    v
+              Twilio <Say>
+                    |
+                    v
+               Voice Reply
 
-### GET /health
-Health check.
+ElevenLabs Webhook Flow
+Audio
+  |
+  v
+ElevenLabs Speech-to-Text
+  |
+  v
+Transcription Webhook
+  |
+  v
+Cloudflare HTTPS Tunnel
+  |
+  v
+Flask Webhook Endpoint
+  |
+  v
+Signature Verification
+  |
+  v
+SQLite Webhook Event Storage
 
-### POST /chat
+Technology Stack
+Technology	Purpose
+Python	Core application logic
+Flask	REST API and webhook server
+OpenRouter	LLM access
+Twilio Voice	Phone calling and voice interaction
+ElevenLabs	Text-to-Speech and Speech-to-Text
+SQLite	Appointment and webhook persistence
+Scikit-learn	TF-IDF knowledge retrieval
+Cloudflare Tunnel	Public HTTPS endpoint for local webhook testing
+HTML/CSS/JavaScript	Browser interface
 
-Example:
-```json
-{
-  "session_id": "user123",
-  "message": "What services do you provide?"
-}
-```
 
-### POST /webhook
-Receives events from an external calling/voice service.
-
-## Setup
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-```
-
-Add your OpenAI API key to `.env`.
-
-Run:
-```bash
-python app.py
-```
-
-Server:
-`http://localhost:5000`
-
-Test:
-```bash
-pytest
-```
-
-## GitHub Safety
-
-Never commit `.env`. The real API keys must remain private.
-
-## Future Improvements
-
-- Persistent database-backed memory
-- Vector database and embeddings for scalable RAG
-- Production ElevenLabs integration
-- Call analytics
-- Authentication
-- CRM integration
-- Appointment scheduling
-- Call summarization
+PROJECT STRUCTURE
+agentic-ai-calling-agent/
+│
+├── app.py
+├── agent.py
+├── knowledge_base.py
+├── tools.py
+├── tts.py
+├── requirements.txt
+├── README.md
+├── .env.example
+├── .gitignore
+│
+├── data/
+│   └── knowledge.txt
+│
+├── templates/
+│   └── index.html
+│
+└── tests/
+    ├── test_api.py
+    ├── test_elevenlabs.py
+    └── test_webhook.py
