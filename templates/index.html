@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Calling Agent</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 700px;
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 18px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 25px;
+        }
+
+        #conversation {
+            height: 350px;
+            overflow-y: auto;
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .message {
+            margin: 12px 0;
+            padding: 12px 15px;
+            border-radius: 10px;
+            line-height: 1.5;
+        }
+
+        .user {
+            background: #334155;
+        }
+
+        .agent {
+            background: #2563eb;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: #10b981;
+            color: white;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #status {
+            text-align: center;
+            margin-top: 15px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🤖 AI Calling Agent</h1>
+
+    <div class="subtitle">
+        Voice-enabled customer support assistant
+    </div>
+
+    <div id="conversation">
+
+        <div class="message agent">
+            <strong>Agent:</strong>
+            Hello! How can I help you today?
+        </div>
+
+    </div>
+
+    <button onclick="startListening()">
+        🎙️ Speak to Agent
+    </button>
+
+    <div id="status">
+        Click the button and speak.
+    </div>
+
+</div>
+
+
+<script>
+
+const sessionId = "browser-" + Date.now();
+
+const conversation =
+    document.getElementById("conversation");
+
+const status =
+    document.getElementById("status");
+
+
+/* --------------------------------------------------
+   Add message to conversation
+-------------------------------------------------- */
+
+function addMessage(sender, text) {
+
+    const message =
+        document.createElement("div");
+
+    message.className =
+        "message " + sender;
+
+    const label =
+        sender === "user"
+            ? "You"
+            : "Agent";
+
+    message.innerHTML =
+        `<strong>${label}:</strong> ${text}`;
+
+    conversation.appendChild(message);
+
+    conversation.scrollTop =
+        conversation.scrollHeight;
+}
+
+
+/* --------------------------------------------------
+   Speech Recognition
+-------------------------------------------------- */
+
+function startListening() {
+
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+
+        status.innerText =
+            "Speech recognition is not supported in this browser.";
+
+        return;
+    }
+
+    const recognition =
+        new SpeechRecognition();
+
+    recognition.lang = "en-IN";
+
+    recognition.interimResults = false;
+
+    recognition.maxAlternatives = 1;
+
+
+    status.innerText =
+        "🎙️ Listening...";
+
+
+    recognition.start();
+
+
+    recognition.onresult =
+        async function(event) {
+
+            const text =
+                event.results[0][0].transcript;
+
+            addMessage(
+                "user",
+                text
+            );
+
+            status.innerText =
+                "🤖 Agent is thinking...";
+
+
+            try {
+
+                /* ----------------------------------
+                   Send message to AI agent
+                ---------------------------------- */
+
+                const response =
+                    await fetch("/chat", {
+
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            session_id:
+                                sessionId,
+
+                            message:
+                                text
+
+                        })
+
+                    });
+
+
+                const data =
+                    await response.json();
+
+
+                if (data.error) {
+
+                    throw new Error(
+                        data.error
+                    );
+
+                }
+
+
+                /* ----------------------------------
+                   Display AI response
+                ---------------------------------- */
+
+                addMessage(
+                    "agent",
+                    data.response
+                );
+
+
+                /* ----------------------------------
+                   Generate ElevenLabs voice
+                ---------------------------------- */
+
+                status.innerText =
+                    "🔊 Generating AI voice...";
+
+                await speak(
+                    data.response
+                );
+
+
+            } catch (error) {
+
+                console.error(error);
+
+                addMessage(
+                    "agent",
+                    "Sorry, something went wrong."
+                );
+
+            }
+
+
+            status.innerText =
+                "Click the button to speak again.";
+        };
+
+
+    recognition.onerror =
+        function(event) {
+
+            console.error(event.error);
+
+            status.innerText =
+                "Could not understand audio. Try again.";
+
+        };
+}
+
+
+/* --------------------------------------------------
+   ElevenLabs Text-to-Speech
+-------------------------------------------------- */
+
+async function speak(text) {
+
+    const response =
+        await fetch("/tts", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body: JSON.stringify({
+                text: text
+            })
+
+        });
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "ElevenLabs TTS request failed."
+        );
+
+    }
+
+
+    /* ----------------------------------------------
+       Convert response into audio
+    ---------------------------------------------- */
+
+    const audioBlob =
+        await response.blob();
+
+
+    const audioUrl =
+        URL.createObjectURL(
+            audioBlob
+        );
+
+
+    const audio =
+        new Audio(audioUrl);
+
+
+    /* ----------------------------------------------
+       Play ElevenLabs audio
+    ---------------------------------------------- */
+
+    await audio.play();
+
+
+    /* ----------------------------------------------
+       Clean up temporary URL
+    ---------------------------------------------- */
+
+    audio.onended =
+        function() {
+
+            URL.revokeObjectURL(
+                audioUrl
+            );
+
+        };
+}
+
+</script>
+
+</body>
+</html>
